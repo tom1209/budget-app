@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Category {
+  id                Int                @id @default(autoincrement())
+  name              String
+  type              String             // "absolute" | "variable" | "income"
+  order             Int                @default(0)
+  recurringExpenses RecurringExpense[]
+  subCategories     SubCategory[]
+}
+
+model SubCategory {
+  id             Int            @id @default(autoincrement())
+  name           String
+  categoryId     Int
+  category       Category       @relation(fields: [categoryId], references: [id])
+  expenseEntries ExpenseEntry[]
+}
+
+model RecurringExpense {
+  id         Int            @id @default(autoincrement())
+  name       String
+  categoryId Int
+  category   Category       @relation(fields: [categoryId], references: [id])
+  amount     Float?
+  frequency  String         @default("monthly")
+  dueDay     Int?
+  notes      String?
+  isActive   Boolean        @default(true)
+  entries    ExpenseEntry[]
+}
+
+model ExpenseEntry {
+  id                 Int               @id @default(autoincrement())
+  budgetPeriodId     Int
+  budgetPeriod       BudgetPeriod      @relation(fields: [budgetPeriodId], references: [id])
+  recurringExpenseId Int?
+  recurringExpense   RecurringExpense? @relation(fields: [recurringExpenseId], references: [id])
+  categoryId         Int
+  subCategoryId      Int?
+  subCategory        SubCategory?      @relation(fields: [subCategoryId], references: [id])
+  amount             Float
+  description        String?
+  date               DateTime          @default(now())
+  isPaid             Boolean           @default(false)
+  paidAt             DateTime?
+  paidBy             String?
+}
+
+model RecurringIncome {
+  id            Int           @id @default(autoincrement())
+  source        String
+  amount        Float
+  frequency     String        @default("monthly") // "weekly" | "biweekly" | "monthly"
+  dayOfWeek     Int?          // 0=Sun … 6=Sat, used by weekly/biweekly
+  anchorDate    String?       // YYYY-MM-DD reference payday for biweekly
+  dayOfMonth    Int?          // 1-31, used by monthly
+  notes         String?
+  isActive      Boolean       @default(true)
+  incomeEntries IncomeEntry[]
+}
+
+model IncomeEntry {
+  id                Int              @id @default(autoincrement())
+  budgetPeriodId    Int
+  budgetPeriod      BudgetPeriod     @relation(fields: [budgetPeriodId], references: [id])
+  recurringIncomeId Int?
+  recurringIncome   RecurringIncome? @relation(fields: [recurringIncomeId], references: [id])
+  source            String
+  amount            Float
+  date              DateTime         @default(now())
+  notes             String?
+}
+
+model BudgetPeriod {
+  id             Int            @id @default(autoincrement())
+  month          Int
+  year           Int
+  createdAt      DateTime       @default(now())
+  expenseEntries ExpenseEntry[]
+  incomeEntries  IncomeEntry[]
+
+  @@unique([month, year])
+}
